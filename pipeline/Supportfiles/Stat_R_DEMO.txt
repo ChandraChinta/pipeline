@@ -1,0 +1,129 @@
+a---------------------------------------------------------------
+R DEMO For Ignite
+--------------------------------------------------------------
+
+ ----------------------------------------------------------------
+
+library(RODBC)
+channel <- odbcConnect("RODBC")
+p <- sqlQuery(channel, "Select * from ArchiveDataSetForFunction") 
+orderts <- data.frame(p)
+library("ggplot2")
+
+qplot(firmfunction, recordsize, data = orderts, colour = as.factor(year), geom = "line")
+
+qplot(firmfunction, recordsize, data = orderts, colour = as.factor(year), geom = "boxplot")
+
+histogram(orderts$firmfunction)
+-- Get Peek
+qplot(year, data=orderts, weight=recordsize, geom="histogram", binwidth=1) 
+
+
+
+
+M <- sqlQuery(channel, "Select year, sum(recordsize) as size from ArchiveDataSetForFunction where year<2014 group by year")
+sizedf1 <- data.frame(M)
+sizets1 <- ts(sizedf1,start=c(2001))
+fileSizeForecastM <- forecast(sizets1, h=2)
+plot(fileSizeForecastM)
+
+
+fileSizeForecastM <- forecast(sizets1, h=4)
+plot(fileSizeForecastM)
+ 
+http://rcharts.io/gallery/
+http://rcharts.io/controls/polychart/index.html
+
+
+
+------------------------------------------------------------------------------------
+Orders POC
+-------------------------------------------
+library(RODBC)
+channel <- odbcConnect("RODBC")
+Q <- sqlQuery(channel, "Select year,quarter,week,orders from  ordersdata")
+orderts <- data.frame(Q)
+
+library(‘ggplot2’)
+qplot(week, orders, data = orderts, colour = as.factor(year), geom = "line")
+qplot(week, data=orderts, colour=as.factor(year), binwidth=0.5) + facet_wrap(~ quarter)
+
+--- There was one more business week in the first quarter of 2009 than in the first quarter of 2010 and 2011; consequently, there is a consistent one week difference between the last weeks of the quarters
+The model building approaches we will use later can usually cope with such a one-week offset discrepancy; for quick and dirty data exploration here let’s get simply rid of the 13-th week of 2009 Q1. Also, to support visualization we introduce a “week of current quarter” variable.
+
+
+orderts2 <- cbind(orderts[-13,], weekinq=c(1:117))
+prev <- orderts2[1,]
+runvar <- 1
+for(i in 2:nrow(orderts2)){
+ current <- orderts2[i,]
+ orderts2[i,"weekinq"] <- ifelse(prev$quarter == current$quarter, runvar+1, 1)
+ runvar <- ifelse(prev$quarter == current$quarter, runvar+1, 1)
+ prev <- current
+}
+rm(prev, current, runvar, i)
+
+
+qplot(weekinq, orders, data = orderts2, colour = as.factor(year), geom = "line") + facet_wrap(~quarter)
+
+ f <- data.frame(coef = fft(orderts2[1:104, "orders"]), freqindex = c(1:104))
+qplot(freqindex, Mod(coef), data = f2[2:53,], geom = "line")
+
+qplot(freqindex, Mod(coef), data = f[2:53,], geom = "line")
+
+
+peaks <- Mod(f$coef) > 3
+ffilt <- f
+ffilt[!peaks, "coef"] <- 0
+ffilt <- data.frame(index=ffilt$freqindex, value=Re(fft(ffilt$coef, inverse=TRUE))/104, type=rep("filtered", times=104))
+ffilt <- rbind(ffilt, data.frame(index=seq(1:104), value=orderts2[1:104,"orders"], type=rep("original", times=104)))
+
+
+
+
+set.seed(100)
+ d <- diamonds[sample(nrow(diamonds), 1000), ]
+ plot_ly(d, x = carat, y = price, text = paste("Clarity: ", clarity),  mode = "markers", color = carat, size = carat)
+-------------------------------------------------
+TableauR -- data to a Tableau Data Extract
+--------------------------------------------------
+
+  library(tableauR)
+  library(RODBC)
+  # create connection to my datastore
+  ch = odbcConnect("DSN", "USER", "PWD")
+  # get the data
+  df = sqlQuery(ch, "SELECT * FROM TABLE")
+  # basic regression
+  mod = glm(x ~ y, data=df, family=binomial())
+  df = transform(df, 
+                 pred = predict(mod, 
+                                newdata=df, 
+                                type="response")
+  # save the scored data to a Tableau Data Extract
+  df2TDE(df, file="r-df.tde")
+
+
+library(RODBC)
+channel <- odbcConnect("RODBC")
+p <- sqlQuery(channel, "Select  Year(createddate) as year,  Size/1024  as Size From  ArchiveDatasetforR Where Size is not null and Size <>-1")
+ 
+myvector <- data.frame(p)
+
+ library("ggplot2")
+fileSizeTrend <- ts(myvector, start=c(2001), end=c(2016), frequency=12)
+qplot(year,Size, data = myvector, colour = as.factor(year), geom = "line")
+
+
+library(forecast)
+fileSizeForecast <- forecast(fileSizeTrend, h=2) -- next 3 years 
+plot(fileSizeForecast)
+
+Q <- sqlQuery(channel, "Select year, sum(recordsize) as size from ArchiveDataSetForFunction group by year")
+sizedf <- data.frame(Q)
+sizets <- ts(sizedf,start=c(2001))
+plot(sizets)
+
+library(forecast)
+fileSizeForecast <- forecast(sizets, h=2)
+plot(fileSizeForecast)

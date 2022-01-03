@@ -1,0 +1,27 @@
+# Some code to investigate number of dependencies for R packages
+# Joseph Rickert
+# Get package infromation from CRAN
+p <- as.data.frame(available.packages(),stringsAsFactors=FALSE)
+head(p)
+
+pkgs <- data.frame(p[,c(1,4)])                  # Pick out Package names and Depends
+row.names(pkgs) <- NULL                         # Get rid of row names
+pkgs <- pkgs[complete.cases(pkgs[,2]),]         # Remove NAs
+
+pkgs$Depends2 <-strsplit(pkgs$Depends,",")      # split list of Depends
+pkgs$numDepends <- as.numeric(lapply(pkgs$Depends2,length)) # Count number of dependencies in list
+zeros <- c(rep(0,dim(p)[1] - dim(pkgs)[1]))     # Account for packages with no dependencies
+Depends <- as.vector(c(zeros,pkgs$numDepends))  # Set up to tablate
+summary(Depends)
+
+table(Depends)
+pkgs[pkgs$numDepends==19,1]                     # Get name of package with most dependencies
+
+library(ggplot2)                               
+df <- data.frame(Depends)                       # Build data frame for ggplot
+h <- ggplot(df, aes(x=Depends))
+h + geom_histogram(binwidth=1,aes(fill=..count..)) + 
+  scale_fill_gradient("Count", low = "green", high = "red") +
+  xlab("Number of Dependencies") +
+  ylab("R Packages") +
+  ggtitle("Histogram of Dependencies for R Packages 12/11/13")
